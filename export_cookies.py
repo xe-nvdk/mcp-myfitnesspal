@@ -11,12 +11,22 @@ import json
 from pathlib import Path
 
 
-def export_cookies_to_env():
+def export_cookies_to_env(browser='auto'):
     """Extract cookies from browser and save to .env file"""
-    print("🍪 Extracting MyFitnessPal cookies from browser...")
+    print(f"🍪 Extracting MyFitnessPal cookies from {browser}...")
     
     # Get cookies from browser
-    cookies = browser_cookie3.load(domain_name='myfitnesspal.com')
+    if browser == 'chrome':
+        cookies = browser_cookie3.chrome(domain_name='myfitnesspal.com')
+    elif browser == 'firefox':
+        cookies = browser_cookie3.firefox(domain_name='myfitnesspal.com')
+    elif browser == 'edge':
+        cookies = browser_cookie3.edge(domain_name='myfitnesspal.com')
+    elif browser == 'safari':
+        cookies = browser_cookie3.safari(domain_name='myfitnesspal.com')
+    else:
+        # Try all browsers (may fail on Safari)
+        cookies = browser_cookie3.load(domain_name='myfitnesspal.com')
     
     # Convert to dict
     cookie_dict = {}
@@ -103,10 +113,42 @@ if __name__ == '__main__':
     print("=" * 60)
     print()
     
-    if len(sys.argv) > 1 and sys.argv[1] == '--json':
+    # Check for help flag
+    if '--help' in sys.argv or '-h' in sys.argv:
+        print("Usage: python export_cookies.py [OPTIONS]")
+        print()
+        print("Options:")
+        print("  --chrome       Extract cookies from Chrome")
+        print("  --firefox      Extract cookies from Firefox")
+        print("  --edge         Extract cookies from Edge")
+        print("  --safari       Extract cookies from Safari (requires Full Disk Access)")
+        print("  --json         Export to JSON file instead of .env")
+        print("  --help, -h     Show this help message")
+        print()
+        print("Examples:")
+        print("  python export_cookies.py --chrome")
+        print("  python export_cookies.py --firefox --json")
+        print()
+        print("Note: Safari on macOS requires 'Full Disk Access' permission.")
+        print("      Use Chrome or Firefox for easier setup.")
+        sys.exit(0)
+    
+    # Parse command line arguments
+    browser = 'auto'
+    use_json = False
+    
+    for arg in sys.argv[1:]:
+        if arg == '--json':
+            use_json = True
+        elif arg in ['--chrome', '--firefox', '--edge', '--safari']:
+            browser = arg.replace('--', '')
+        elif arg.startswith('--browser='):
+            browser = arg.split('=')[1]
+    
+    if use_json:
         success = export_cookies_to_json()
     else:
-        success = export_cookies_to_env()
+        success = export_cookies_to_env(browser=browser)
     
     if success:
         print("\n✅ Cookie export complete!")
@@ -117,4 +159,3 @@ if __name__ == '__main__':
     else:
         print("\n❌ Cookie export failed")
         sys.exit(1)
-
