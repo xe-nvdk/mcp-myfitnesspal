@@ -43,7 +43,7 @@ Add to your MCP client config (e.g., `.cursor/mcp.json`):
     "myfitnesspal": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/mfp-mcp", "python", "main.py"]
+      "args": ["run", "--directory", "/path/to/mfp-mcp", "python", "server.py"]
     }
   }
 }
