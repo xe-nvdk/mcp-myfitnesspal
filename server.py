@@ -7,9 +7,16 @@ from MyFitnessPal using the python-myfitnesspal library.
 """
 
 import os
+import sys
+import logging
 from datetime import date, datetime, timedelta
 from typing import Optional
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+logger = logging.getLogger(__name__)
+
+MAX_DATE_RANGE_DAYS = 90
 
 from fastmcp import FastMCP
 
@@ -382,7 +389,10 @@ def get_date_range_summary(start_date: str, end_date: str):
         
         if start > end:
             raise ValueError("Start date must be before or equal to end date")
-        
+
+        if (end - start).days > MAX_DATE_RANGE_DAYS:
+            raise ValueError(f"Date range cannot exceed {MAX_DATE_RANGE_DAYS} days")
+
         client = get_client()
         
         # Collect data for each day
@@ -468,6 +478,7 @@ def main():
     if mcp_port:
         mcp.run(port=int(mcp_port), host=mcp_host, transport="streamable-http")
     else:
-        mcp.run()    
+        mcp.run()
+
 if __name__ == "__main__":
     main()
