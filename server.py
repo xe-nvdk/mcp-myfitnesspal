@@ -16,6 +16,8 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 logger = logging.getLogger(__name__)
 
+MAX_DATE_RANGE_DAYS = 90
+
 from fastmcp import FastMCP
 
 from api_client import MyFitnessPalClient
@@ -388,9 +390,8 @@ def get_date_range_summary(start_date: str, end_date: str):
         if start > end:
             raise ValueError("Start date must be before or equal to end date")
 
-        max_days = 90
-        if (end - start).days > max_days:
-            raise ValueError(f"Date range cannot exceed {max_days} days")
+        if (end - start).days > MAX_DATE_RANGE_DAYS:
+            raise ValueError(f"Date range cannot exceed {MAX_DATE_RANGE_DAYS} days")
 
         client = get_client()
         
