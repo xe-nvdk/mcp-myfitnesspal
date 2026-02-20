@@ -8,10 +8,13 @@ Supports both browser cookie authentication and environment-based cookies.
 import sys
 import os
 import json
+import logging
 from pathlib import Path
 from datetime import date, timedelta
 from typing import Optional
 from http.cookiejar import Cookie, CookieJar
+
+logger = logging.getLogger(__name__)
 
 # Add myfitnesspal library to path
 myfitnesspal_path = Path(__file__).parent / "myfitnesspal"
@@ -32,14 +35,41 @@ class MyFitnessPalClient:
         2. Browser cookies (for local development)
         """
         cookiejar = self._load_cookies_from_env()
-        
+
+        if not cookiejar:
+            cookiejar = self._load_cookies_from_chrome()
+
         if cookiejar:
-            # Use cookies from environment
             self.client = myfitnesspal.Client(cookiejar=cookiejar)
         else:
-            # Fall back to browser cookies
             self.client = myfitnesspal.Client()
     
+    def _load_cookies_from_chrome(self) -> Optional[CookieJar]:
+        """Try loading MFP cookies from all Chrome profiles"""
+        import browser_cookie3
+
+        chrome_base = Path.home() / "Library" / "Application Support" / "Google" / "Chrome"
+        profiles = [chrome_base / "Default"]
+        profiles.extend(sorted(chrome_base.glob("Profile *")))
+
+        for profile_dir in profiles:
+            cookie_file = profile_dir / "Cookies"
+            if not cookie_file.exists():
+                continue
+            try:
+                jar = browser_cookie3.chrome(
+                    domain_name='myfitnesspal.com',
+                    cookie_file=str(cookie_file),
+                )
+                cookies = list(jar)
+                if cookies:
+                    logger.info(f"Found {len(cookies)} MFP cookies in {profile_dir.name}")
+                    return jar
+            except Exception as e:
+                logger.debug(f"Could not read cookies from {profile_dir.name}: {e}")
+
+        return None
+
     def _load_cookies_from_env(self) -> Optional[CookieJar]:
         """Load cookies from MFP_COOKIES environment variable if present"""
         cookies_json = os.getenv('MFP_COOKIES')
@@ -76,7 +106,7 @@ class MyFitnessPalClient:
             return jar
             
         except Exception as e:
-            print(f"Warning: Failed to load cookies from environment: {e}")
+            logger.warning(f"Failed to load cookies from environment: {e}")
             return None
     
     def get_day(self, target_date: date):
@@ -104,7 +134,6 @@ class MyFitnessPalClient:
         while current <= end_date:
             try:
                 yield self.get_day(current)
-            except Exception:
-                # Skip days with errors
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to fetch data for {current}: {e}")
             current = current + timedelta(days=1)
